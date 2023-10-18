@@ -7,7 +7,7 @@ const typeDefs = gql`
       import: ["@key", "@shareable"]
     )
 
-  type Posts @key(fields: "id userId") {
+  type Posts @key(fields: "id userId repostUserId") {
     id: ID!
     userId: String!
     content: String
@@ -15,6 +15,16 @@ const typeDefs = gql`
     comments: [Comments]
     likes: [Likes]
     createdAt: String
+
+    postType: String
+    repostId: String
+    repostUserId: String
+    repostCreatedAt: String
+    timestamp: String
+
+    repostCount: Int
+    commentCount: Int
+    likeCount: Int
   }
   type Comments @key(fields: "id userId") {
     id: ID!
@@ -37,9 +47,10 @@ const typeDefs = gql`
     post(id: ID!): Posts
   }
   type Mutation {
-    createPost(content: String!, userId: String!): Posts
-    createComment(content: String!, postId: String!, userId: String!): Comments
-    createLike(postId: String!, userId: String!): Likes
+    createPost(content: String!): Posts
+    commentPost(content: String!, postId: String!): Comments
+    likePost(postId: String!): Likes
+    repostPost(postId: String!): Boolean
   }
 `;
 

@@ -1,14 +1,26 @@
 import { GraphQLResolverMap } from "@apollo/subgraph/dist/schema-helper";
 import prisma from "../db";
-import { Prisma } from "@prisma/client";
 import { GraphQLError } from "graphql";
 import { AuthContext } from "../libs/auth";
-
+import { ComposeFeed, covertOnePostToFeedPost } from "../utils/feed";
+import { checkAuthContextThrowError } from "../utils/context";
 const resolvers: GraphQLResolverMap<AuthContext> = {
   Query: {
     posts: async () => {
-      const posts = await prisma.post.findMany();
-      return posts;
+      const posts = await prisma.post.findMany({
+        orderBy: {
+          createdAt: "desc",
+        },
+      });
+      const reposts = await prisma.repost.findMany({
+        include: {
+          Post: true,
+        },
+        orderBy: {
+          createdAt: "desc",
+        },
+      });
+      return ComposeFeed(posts, reposts);
     },
     post: async (parent: any, args: { id: string }) => {
       const { id } = args;
@@ -17,7 +29,14 @@ const resolvers: GraphQLResolverMap<AuthContext> = {
           id,
         },
       });
-      return post;
+      if (!post) {
+        throw new GraphQLError("Post not found", {
+          extensions: {
+            code: "NOT_FOUND",
+          },
+        });
+      }
+      return covertOnePostToFeedPost(post);
     },
   },
   Posts: {
@@ -43,6 +62,36 @@ const resolvers: GraphQLResolverMap<AuthContext> = {
       });
       return likes;
     },
+    likeCount: async (parent: { id: string }, args: any) => {
+      const { id } = parent;
+      const likes = await prisma.like.aggregate({
+        _count: true,
+        where: {
+          postId: id,
+        },
+      });
+      return likes._count;
+    },
+    repostCount: async (parent: { id: string }, args: any) => {
+      const { id } = parent;
+      const reposts = await prisma.repost.aggregate({
+        _count: true,
+        where: {
+          postId: id,
+        },
+      });
+      return reposts._count;
+    },
+    commentCount: async (parent: { id: string }, args: any) => {
+      const { id } = parent;
+      const comments = await prisma.comment.aggregate({
+        _count: true,
+        where: {
+          postId: id,
+        },
+      });
+      return comments._count;
+    },
   },
   Likes: {
     post: async (like: any) => {
@@ -64,7 +113,7 @@ const resolvers: GraphQLResolverMap<AuthContext> = {
           userId: id,
         },
       });
-      return posts;
+      return ComposeFeed(posts, undefined);
     },
     followingFeed: async (parent: any, args: any) => {
       const { id } = parent;
@@ -79,22 +128,42 @@ const resolvers: GraphQLResolverMap<AuthContext> = {
           createdAt: "desc",
         },
       });
-      return posts;
+      const reposts = await prisma.repost.findMany({
+        where: {
+          userId: {
+            in: followsIds,
+          },
+        },
+        include: {
+          Post: true,
+        },
+        orderBy: {
+          createdAt: "desc",
+        },
+      });
+      const feed = ComposeFeed(posts, reposts);
+      return feed;
     },
   },
   Mutation: {
-    createPost: async (parent: any, args: any) => {
-      const { content, userId } = args;
+    createPost: async (parent: any, args: { content: string }, context) => {
+      const { content } = args;
+      const userId = checkAuthContextThrowError(context);
       const post = await prisma.post.create({
         data: {
           content,
           userId,
         },
       });
-      return post;
+      return covertOnePostToFeedPost(post);
     },
-    createComment: async (parent: any, args: any) => {
-      const { content, postId, userId } = args;
+    commentPost: async (
+      parent: any,
+      args: { content: string; postId: string },
+      context
+    ) => {
+      const { content, postId } = args;
+      const userId = checkAuthContextThrowError(context);
       const comment = await prisma.comment.create({
         data: {
           userId,
@@ -104,8 +173,9 @@ const resolvers: GraphQLResolverMap<AuthContext> = {
       });
       return comment;
     },
-    createLike: async (parent: any, args: any) => {
-      const { postId, userId } = args;
+    likePost: async (parent: any, args: { postId: string }, context) => {
+      const { postId } = args;
+      const userId = checkAuthContextThrowError(context);
       const like = await prisma.like.create({
         data: {
           userId,
@@ -113,6 +183,17 @@ const resolvers: GraphQLResolverMap<AuthContext> = {
         },
       });
       return like;
+    },
+    repostPost: async (parent: any, args: { postId: string }, context) => {
+      const { postId } = args;
+      const userId = checkAuthContextThrowError(context);
+      const repost = await prisma.repost.create({
+        data: {
+          postId,
+          userId,
+        },
+      });
+      return true;
     },
   },
 };
