@@ -47,7 +47,7 @@ const typeDefs = gql`
     post(id: ID!): Posts
   }
   type Mutation {
-    createPost(content: String!): Posts
+    createPost(content: String, imageUrl: String): Posts
     commentPost(content: String!, postId: String!): Comments
     likePost(postId: String!): Likes
     repostPost(postId: String!): Boolean

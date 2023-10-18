@@ -105,8 +105,7 @@ const resolvers: GraphQLResolverMap<AuthContext> = {
     },
   },
   User: {
-    posts: async (parent: any, args: any) => {
-      console.log("User Parent: ", parent);
+    posts: async (parent: { id: string }) => {
       const { id } = parent;
       const posts = await prisma.post.findMany({
         where: {
@@ -115,9 +114,8 @@ const resolvers: GraphQLResolverMap<AuthContext> = {
       });
       return ComposeFeed(posts, undefined);
     },
-    followingFeed: async (parent: any, args: any) => {
-      const { id } = parent;
-      const { followsIds }: { followsIds: string[] } = parent;
+    followingFeed: async (parent: { followsIds: string[] }) => {
+      const { followsIds } = parent;
       const posts = await prisma.post.findMany({
         where: {
           userId: {
@@ -146,12 +144,24 @@ const resolvers: GraphQLResolverMap<AuthContext> = {
     },
   },
   Mutation: {
-    createPost: async (parent: any, args: { content: string }, context) => {
-      const { content } = args;
+    createPost: async (
+      parent: any,
+      args: { content: string | null; imageUrl: string | null },
+      context
+    ) => {
+      const { content, imageUrl } = args;
       const userId = checkAuthContextThrowError(context);
+      if (!content && !imageUrl) {
+        throw new GraphQLError("Content or image url are required", {
+          extensions: {
+            code: "CONTENT_OR_IMAGE_URL_REQUIRED",
+          },
+        });
+      }
       const post = await prisma.post.create({
         data: {
           content,
+          imageUrl,
           userId,
         },
       });
