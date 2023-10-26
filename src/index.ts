@@ -12,7 +12,7 @@ const server = new ApolloServer<AuthContext>({
 
 (async () => {
   const { url } = await startStandaloneServer(server, {
-    listen: { port: config.port },
+    listen: { port: config.PORT || 4000 },
     context: async ({ req }): Promise<AuthContext> => {
       const userId = req.headers["user-id"] as string | undefined;
       return { userId };
