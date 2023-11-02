@@ -25,6 +25,9 @@ const typeDefs = gql`
     repostCount: Int
     commentCount: Int
     likeCount: Int
+
+    isUserLiked: Boolean
+    isUserReposted: Boolean
   }
   type Comments @key(fields: "id userId") {
     id: ID!
@@ -50,6 +53,7 @@ const typeDefs = gql`
     createPost(content: String, imageUrl: String): Posts
     commentPost(content: String!, postId: String!): Comments
     likePost(postId: String!): Likes
+    unlikePost(postId: String!): Boolean
     repostPost(postId: String!): Boolean
   }
 `;

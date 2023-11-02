@@ -92,6 +92,39 @@ const resolvers: GraphQLResolverMap<AuthContext> = {
       });
       return comments._count;
     },
+    isUserLiked: async (parent: { id: string }, args: unknown, context) => {
+      console.log("isUserLiked: ", parent, context);
+      const { id } = parent;
+      if (!context.userId) {
+        return false;
+      }
+      const userId = context.userId;
+      const like = await prisma.like.findUnique({
+        where: {
+          postId_userId: {
+            postId: id,
+            userId,
+          },
+        },
+      });
+      return !!like;
+    },
+    isUserReposted: async (parent: { id: string }, args: unknown, context) => {
+      const { id } = parent;
+      if (!context.userId) {
+        return false;
+      }
+      const userId = context.userId;
+      const repost = await prisma.repost.findFirst({
+        where: {
+          AND: {
+            postId: id,
+            userId,
+          },
+        },
+      });
+      return !!repost;
+    },
   },
   Likes: {
     post: async (like: { postId: string }) => {
@@ -111,8 +144,22 @@ const resolvers: GraphQLResolverMap<AuthContext> = {
         where: {
           userId: id,
         },
+        orderBy: {
+          createdAt: "desc",
+        },
       });
-      return ComposeFeed(posts, undefined);
+      const reposts = await prisma.repost.findMany({
+        where: {
+          userId: id,
+        },
+        orderBy: {
+          createdAt: "desc",
+        },
+        include: {
+          Post: true,
+        },
+      });
+      return ComposeFeed(posts, reposts);
     },
     followingFeed: async (parent: { followsIds: string[] }) => {
       const { followsIds } = parent;
@@ -193,6 +240,23 @@ const resolvers: GraphQLResolverMap<AuthContext> = {
         },
       });
       return like;
+    },
+    unlikePost: async (parent: unknown, args: { postId: string }, context) => {
+      const { postId } = args;
+      const userId = checkAuthContextThrowError(context);
+      const like = await prisma.like.delete({
+        where: {
+          postId_userId: {
+            postId,
+            userId,
+          },
+        },
+      });
+      if (like) {
+        return true;
+      } else {
+        return false;
+      }
     },
     repostPost: async (parent: unknown, args: { postId: string }, context) => {
       const { postId } = args;
