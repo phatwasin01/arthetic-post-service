@@ -32,7 +32,8 @@ const typeDefs = gql`
   type Comments @key(fields: "id userId") {
     id: ID!
     userId: String!
-    content: String
+    content: String!
+    createdAt: String!
   }
   type Likes @key(fields: "userId") {
     userId: ID!
