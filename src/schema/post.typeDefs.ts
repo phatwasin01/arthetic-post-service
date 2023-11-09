@@ -39,11 +39,11 @@ const typeDefs = gql`
     post: Posts
   }
 
-  type User @key(fields: "id followsIds") @shareable {
+  type User @key(fields: "id followingIds") @shareable {
     id: ID!
     posts: [Posts]
     followingFeed: [Posts]
-    followsIds: [ID]
+    followingIds: [ID!]!
   }
   type Query {
     posts: [Posts]
