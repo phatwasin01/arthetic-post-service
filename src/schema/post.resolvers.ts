@@ -161,12 +161,12 @@ const resolvers: GraphQLResolverMap<AuthContext> = {
       });
       return ComposeFeed(posts, reposts);
     },
-    followingFeed: async (parent: { followsIds: string[] }) => {
-      const { followsIds } = parent;
+    followingFeed: async (parent: { followingIds: string[] }) => {
+      const { followingIds } = parent;
       const posts = await prisma.post.findMany({
         where: {
           userId: {
-            in: followsIds,
+            in: followingIds,
           },
         },
         orderBy: {
@@ -176,7 +176,7 @@ const resolvers: GraphQLResolverMap<AuthContext> = {
       const reposts = await prisma.repost.findMany({
         where: {
           userId: {
-            in: followsIds,
+            in: followingIds,
           },
         },
         include: {
