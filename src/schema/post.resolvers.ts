@@ -50,12 +50,16 @@ const resolvers: GraphQLResolverMap<AuthContext> = {
             not: null,
           },
         },
-        orderBy: {
-          createdAt: "desc",
-          Like: {
-            _count: "desc",
+        orderBy: [
+          {
+            createdAt: "desc",
           },
-        },
+          {
+            Like: {
+              _count: "desc",
+            },
+          },
+        ],
         take: 20,
       });
       return convertManyPostToFeedPost(posts);
