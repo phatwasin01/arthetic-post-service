@@ -2,7 +2,11 @@ import { GraphQLResolverMap } from "@apollo/subgraph/dist/schema-helper";
 import prisma from "../db";
 import { GraphQLError } from "graphql";
 import { AuthContext } from "../libs/auth";
-import { ComposeFeed, covertOnePostToFeedPost } from "../utils/feed";
+import {
+  ComposeFeed,
+  covertOnePostToFeedPost,
+  convertManyPostToFeedPost,
+} from "../utils/feed";
 import { checkAuthContextThrowError } from "../utils/context";
 const resolvers: GraphQLResolverMap<AuthContext> = {
   Query: {
@@ -37,6 +41,24 @@ const resolvers: GraphQLResolverMap<AuthContext> = {
         });
       }
       return covertOnePostToFeedPost(post);
+    },
+    discoverGlobalPosts: async (parent: unknown, args: unknown, context) => {
+      checkAuthContextThrowError(context);
+      const posts = await prisma.post.findMany({
+        where: {
+          imageUrl: {
+            not: null,
+          },
+        },
+        orderBy: {
+          createdAt: "desc",
+          Like: {
+            _count: "desc",
+          },
+        },
+        take: 20,
+      });
+      return convertManyPostToFeedPost(posts);
     },
   },
   Posts: {

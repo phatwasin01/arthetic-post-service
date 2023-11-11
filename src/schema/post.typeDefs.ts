@@ -49,6 +49,7 @@ const typeDefs = gql`
   type Query {
     posts: [Posts]
     post(id: ID!): Posts
+    discoverGlobalPosts: [Posts!]!
   }
   type Mutation {
     createPost(content: String, imageUrl: String): Posts
