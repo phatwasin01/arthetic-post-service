@@ -52,12 +52,12 @@ const resolvers: GraphQLResolverMap<AuthContext> = {
         },
         orderBy: [
           {
-            createdAt: "desc",
-          },
-          {
             Like: {
               _count: "desc",
             },
+          },
+          {
+            createdAt: "desc",
           },
         ],
         take: 20,
