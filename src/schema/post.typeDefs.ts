@@ -25,31 +25,37 @@ const typeDefs = gql`
     repostCount: Int
     commentCount: Int
     likeCount: Int
+
+    isUserLiked: Boolean
+    isUserReposted: Boolean
   }
   type Comments @key(fields: "id userId") {
     id: ID!
     userId: String!
-    content: String
+    content: String!
+    createdAt: String!
   }
   type Likes @key(fields: "userId") {
     userId: ID!
     post: Posts
   }
 
-  type User @key(fields: "id followsIds") @shareable {
+  type User @key(fields: "id followingIds") @shareable {
     id: ID!
     posts: [Posts]
     followingFeed: [Posts]
-    followsIds: [ID]
+    followingIds: [ID!]!
   }
   type Query {
     posts: [Posts]
     post(id: ID!): Posts
+    discoverGlobalPosts: [Posts!]!
   }
   type Mutation {
     createPost(content: String, imageUrl: String): Posts
     commentPost(content: String!, postId: String!): Comments
     likePost(postId: String!): Likes
+    unlikePost(postId: String!): Boolean
     repostPost(postId: String!): Boolean
   }
 `;

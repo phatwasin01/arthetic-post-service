@@ -5,6 +5,8 @@
   "main": "index.js",
   "scripts": {
     "start": "node dist/index.js",
+    "start:migrate": "prisma migrate deploy && node dist/index.js",
+    "migrate": "prisma generate && prisma migrate deploy",
     "dev": "nodemon",
     "build": "tsc",
     "lint": "eslint 'src/**/*.ts'"
@@ -18,7 +20,9 @@
     "@prisma/client": "5.4.1",
     "dotenv": "^16.3.1",
     "graphql": "^16.8.1",
-    "graphql-tag": "^2.12.6"
+    "graphql-tag": "^2.12.6",
+    "zod": "^3.22.4",
+    "prisma": "^5.4.1"
   },
   "devDependencies": {
     "@types/node": "^20.8.2",
@@ -26,7 +30,6 @@
     "@typescript-eslint/parser": "^6.7.4",
     "eslint": "^8.50.0",
     "nodemon": "^3.0.1",
-    "prisma": "^5.4.1",
     "typescript": "^5.2.2"
   }
 }

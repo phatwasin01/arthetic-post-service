@@ -1,0 +1,97 @@
+# # This workflow will build a golang project
+# # For more information see: https://docs.github.com/en/actions/automating-builds-and-tests/building-and-testing-go
+
+name: Run Test
+
+on:
+  push:
+    branches: ["main", "cicd"]
+  pull_request:
+    branches: ["main"]
+
+jobs:
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    # Service containers to run with `container-job`
+    env:
+      DATABASE_URL: postgres://root:secret@localhost:5432/arthetic?sslmode=disable
+      JWT_SECRET: secret
+      JWT_EXPIRES_IN: "4h"
+      SALT_ROUNDS: 10
+      PORT: 4000
+    services:
+      # Label used to access the service container
+      postgres:
+        # Docker Hub image
+        image: postgres:15
+        # Provide the password for postgres
+        env:
+          POSTGRES_USER: root
+          POSTGRES_PASSWORD: secret
+          POSTGRES_DB: arthetic
+        # Set health checks to wait until postgres has started
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          # Maps tcp port 5432 on service container to the host
+          - 5432:5432
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@0609f0983b7a228f052f81ef4c3d6510cae254ad
+        with:
+          version: 8.7.6
+      - uses: actions/setup-node@v3
+        with:
+          node-version: "18"
+          cache: "pnpm"
+      - run: pnpm install
+      - run: pnpx prisma migrate deploy
+      - run: pnpx prisma generate
+      - run: pnpm build
+
+  deploy:
+    needs: [test]
+    name: Build Image
+    runs-on: ubuntu-latest
+    permissions:
+      contents: "read"
+      id-token: "write"
+      actions: "read"
+    steps:
+      # actions/checkout MUST come before auth
+      - uses: "actions/checkout@v4"
+
+      - id: "auth"
+        name: "Authenticate to Google Cloud"
+        uses: "google-github-actions/auth@v1"
+        with:
+          credentials_json: "${{ secrets.GOOGLE_CREDENTIALS }}"
+
+      - name: "Set up Cloud SDK"
+        uses: "google-github-actions/setup-gcloud@v1"
+
+      - name: Configure Docker
+        run: gcloud auth print-access-token | docker login -u oauth2accesstoken --password-stdin https://asia-southeast1-docker.pkg.dev
+
+      - name: Build and push
+        run: |
+          docker build -t asia-southeast1-docker.pkg.dev/arthetic/arthetic-images/posts-svc:latest .
+          docker push asia-southeast1-docker.pkg.dev/arthetic/arthetic-images/posts-svc:latest
+
+      - name: Connect to GKE
+        run: |
+          gcloud components install gke-gcloud-auth-plugin
+          gcloud container clusters get-credentials arthetic-cluster --region asia-southeast1 --project arthetic
+
+      - name: Deploy to GKE
+        run: |
+          kubectl apply -f gke/deployment.yaml
+          kubectl apply -f gke/service.yaml
+          kubectl rollout restart deployment/posts-app
+          sleep 10
+          kubectl rollout restart deployment/gateway-app

@@ -1,31 +1,14 @@
 import dotenv from "dotenv";
+import { z } from "zod";
 dotenv.config();
 
-namespace SetEnv {
-  export const toString = (v: any): string => `${v}`;
-  export const toInteger = (v: any): number => {
-    if (isNaN(Number(v))) {
-      return 0;
-    }
-    return parseInt(v, 10);
-  };
-  export const toNumber = (v: any): number => {
-    if (isNaN(Number(v))) {
-      return 0;
-    }
-    return Number(v);
-  };
-  export const toBoolean = (v: any): boolean => {
-    if (typeof v === "boolean") {
-      return v;
-    }
-    if (v === "true") {
-      return true;
-    }
-    return false;
-  };
-}
+const envSchema = z.object({
+  PORT: z
+    .string()
+    .transform((val) => parseInt(val, 10))
+    .optional(),
+  DATABASE_URL: z.string().optional(),
+  NODE_ENV: z.string().optional(),
+});
 
-export const config = {
-  port: SetEnv.toInteger(process.env.PORT),
-};
+export const config = envSchema.parse(process.env);
